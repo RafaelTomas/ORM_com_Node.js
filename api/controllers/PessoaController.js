@@ -1,10 +1,14 @@
-const database = require('../models')
-const Sequelize = require('sequelize')
+// const database = require('../models')
+// const Sequelize = require('sequelize')
+
+const { PessoasServices } = require('../services')
+const pessoasServices = new PessoasServices()
+
 
 class PessoaController {
     static async pegaPessoasAtivas(req, res) {
         try{
-        const pessoasAtivas = await database.Pessoas.findAll()
+        const pessoasAtivas = await pessoasServices.pegaRegistrosAtivos()
         return res.status(200).json(pessoasAtivas)
         }catch (error){
             return res.status(500).json(error.message)
@@ -13,7 +17,7 @@ class PessoaController {
 
     static async pegaTodasAsPessoas(req, res) {
         try{
-        const todasAsPessoas = await database.Pessoas.scope('todos').findAll()
+        const todasAsPessoas = await pessoasServices.pegaTodosOsRegistros()
         return res.status(200).json(todasAsPessoas)
         }catch (error){
             return res.status(500).json(error.message)
@@ -24,7 +28,7 @@ class PessoaController {
     static async pegaUmaPessoa(req, res){
         const { id } = req.params
         try{
-            const umaPessoa = await database.Pessoas.findOne( {
+            const umaPessoa = await pessoasServices.findOne( {
                 where : {
                      id: Number(id)
                     }
@@ -38,7 +42,7 @@ class PessoaController {
     static async criaPessoa(req, res) {
         const novaPessoa = req.body
         try {
-            const novaPessoaCriada = await database.Pessoas.create(novaPessoa)
+            const novaPessoaCriada = await pessoasServices.create(novaPessoa)
             return res.status(200).json(novaPessoaCriada)
 
         } catch (error) {
@@ -50,8 +54,8 @@ class PessoaController {
         const { id } = req.params
         const novasInfo = req.body
         try {
-            await database.Pessoas.update(novasInfo, { where: { id: Number(id)}})
-            const pessoaAtualizada = await database.Pessoas.findOne( { where: { id: Number(id)}})
+            await pessoasServices.update(novasInfo, { where: { id: Number(id)}})
+            const pessoaAtualizada = await pessoasServices.findOne( { where: { id: Number(id)}})
             return res.status(200).json(pessoaAtualizada)
         } catch (error) {
             return res.status(500).json(error.message)
@@ -61,7 +65,7 @@ class PessoaController {
     static async apagaPessoa(req, res){
         const { id } = req.params
         try {
-            await database.Pessoas.destroy(  { where: { id: Number(id)}} )
+            await pessoasServices.destroy(  { where: { id: Number(id)}} )
             return res.status(200).json({ message: `id ${id} destroy`})
         } catch (error) {
             return res.status(500).json(error.message)
@@ -72,7 +76,7 @@ class PessoaController {
     static async restauraPessoa(req, res) {
         const { id } = req.params
         try {
-            await database.Pessoas.restore( {where: {id: Number(id) } } )
+            await pessoasServices.restore( {where: {id: Number(id) } } )
             return res.status(200).json({message: `id ${id} restored`})
         } catch (error) {
             return res.status(500).json(error.message)
@@ -153,7 +157,7 @@ class PessoaController {
     static async pegaMatricula(req, res){
         const { estudanteId } = req.params
         try {
-            const pessoa = await database.Pessoas.findOne({ where: { id: Number(estudanteId)}})
+            const pessoa = await pessoasServices.findOne({ where: { id: Number(estudanteId)}})
             const matriculas = await pessoa.getAulasMatriculadas
             return res.status(200).json(matriculas)
         } catch (error) {
@@ -190,17 +194,11 @@ class PessoaController {
     }   
 
     static async cancelaPessoa(req, res){
-        const lotacaoTurma = 2
+        const { estudanteId } = req.params
         try {
-            const turmasLotadas = await database.Matriculas.findAndCountAll({
-                where: {
-                    status: 'confirmado'
-                },
-                attributes: ['turmas_id'],
-                group: ['turma_id'],
-                having: Sequelize.literal(`count(turma_id) >= ${lotacaoTurma}`)
-            })
-           return res.status(200).json(turmasLotadas)
+            await pessoasServices.cancelaPessoaEMatriculas(Number(estudanteId))
+            return res.status(200).json({ message: `Matricula referente ao estudante '${estudanteId}' cancelada`})
+            
         } catch (error) {
             return res.status(500).json(error.message)
         }
